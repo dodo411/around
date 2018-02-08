@@ -103,8 +103,8 @@ func handlerPost(w http.ResponseWriter, r *http.Request)  {
 	tbl := bt_client.Open("post")
 	mut := bigtable.NewMutation()
 	t := bigtable.Now()
-	mut.Set("post", "user", t, []byte("p.User"))
-	mut.Set("post", "message", t, []byte("p.Message"))
+	mut.Set("post", "user", t, []byte(p.User))
+	mut.Set("post", "message", t, []byte(p.Message))
 	mut.Set("location", "lat", t, []byte(strconv.FormatFloat(p.Location.Lat, 'f', -1, 64)))
 	mut.Set("location", "lon", t, []byte(strconv.FormatFloat(p.Location.Lon, 'f', -1, 64)))
 
@@ -150,7 +150,7 @@ const (
 	PROJECT_ID = "spry-effect-194222"
 	BT_INSTANCE = "around-post"
 	// Needs to update this URL if you deploy it to cloud.
-	ES_URL = "http://35.229.31.117:9200"
+	ES_URL = "http://35.229.74.39:9200"
 )
 
 func handlerSearch(w http.ResponseWriter, r *http.Request) {
@@ -218,3 +218,4 @@ func handlerSearch(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 
 }
+
