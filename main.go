@@ -11,7 +11,7 @@ import (
 	"github.com/pborman/uuid"
 	"context"
 	"cloud.google.com/go/bigtable"
-
+	"strings"
 )
 
 type Location struct {
@@ -25,17 +25,17 @@ type Post struct {
 	Location Location `json:"location"`
 }
 
-/**
-	json {
-		user: "jack",
-		message: "this is message"
-		location: {
-			lat: 10
-			lon: 20
-		}
-	}
- */
 
+const (
+	INDEX = "around"
+	TYPE = "post"
+	DISTANCE = "200km"
+	// Needs to update
+	PROJECT_ID = "spry-effect-194222"
+	BT_INSTANCE = "around-post"
+	// Needs to update this URL if you deploy it to cloud.
+	ES_URL = "http://35.231.0.199:9200"
+)
 
 func main() {
 
@@ -90,7 +90,6 @@ func handlerPost(w http.ResponseWriter, r *http.Request)  {
 	id := uuid.New()
 	// Save to ES.
 	saveToES(&p, id)
-
 	// Save to BigTable
 	ctx := context.Background()
 	// you must update project name here
@@ -103,6 +102,7 @@ func handlerPost(w http.ResponseWriter, r *http.Request)  {
 	tbl := bt_client.Open("post")
 	mut := bigtable.NewMutation()
 	t := bigtable.Now()
+
 	mut.Set("post", "user", t, []byte(p.User))
 	mut.Set("post", "message", t, []byte(p.Message))
 	mut.Set("location", "lat", t, []byte(strconv.FormatFloat(p.Location.Lat, 'f', -1, 64)))
@@ -142,16 +142,6 @@ func saveToES(p *Post, id string) {
 	fmt.Printf("Post is saved to Index: %s\n", p.Message)
 }
 
-const (
-	INDEX = "around"
-	TYPE = "post"
-	DISTANCE = "200km"
-	// Needs to update
-	PROJECT_ID = "spry-effect-194222"
-	BT_INSTANCE = "around-post"
-	// Needs to update this URL if you deploy it to cloud.
-	ES_URL = "http://35.229.74.39:9200"
-)
 
 func handlerSearch(w http.ResponseWriter, r *http.Request) {
 
@@ -203,9 +193,10 @@ func handlerSearch(w http.ResponseWriter, r *http.Request) {
 	for _, item := range searchResult.Each(reflect.TypeOf(typ)) { // instance of
 		p := item.(Post) // p = (Post) item
 		fmt.Printf("Post by %s: %s at lat %v and lon %v\n", p.User, p.Message, p.Location.Lat, p.Location.Lon)
-		// TODO(student homework): Perform filtering based on keywords such as web spam etc.
-		ps = append(ps, p)
 
+		if !containsFilteredWords(&p.Message) {
+			ps = append(ps, p)
+		}
 	}
 	js, err := json.Marshal(ps)
 	if err != nil {
@@ -218,4 +209,15 @@ func handlerSearch(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 
 }
-
+func containsFilteredWords(s *string) bool {
+	filteredWords := []string{
+		"fuck",
+		"shit",
+	}
+	for _, word := range filteredWords {
+		if strings.Contains(*s, word) {
+			return true
+		}
+	}
+	return false
+}
